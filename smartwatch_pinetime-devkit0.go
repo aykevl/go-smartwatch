@@ -18,12 +18,32 @@ type Watch struct {
 
 var watch *Watch
 
+// The two pins connected to the power regulator chip, that indicate charging
+// status and power presence.
+const (
+	pinBatteryCharging machine.Pin = 12
+	pinPowerConnected  machine.Pin = 19
+)
+
+// Voltage to percent mappings. Values in between can be linearly approximated.
+// This is a rough fitting, better fits are likely possible.
+var voltagePercentPositions = []voltagePercentPosition{
+	{3880, 100},
+	{3780, 80},
+	{3690, 60},
+	{3640, 40},
+	{3610, 20},
+	{3520, 0},
+}
+
 // Open returns a Watch instance. It is a singleton: opening it a second time
 // will still return the same object, if opening the first time succeeded.
 func Open() (*Watch, error) {
 	if watch != nil {
 		return watch, nil
 	}
+
+	// Configure the screen.
 	spi := machine.SPI0
 	spi.Configure(machine.SPIConfig{
 		MOSI:      machine.SPI0_MOSI_PIN,
@@ -48,5 +68,37 @@ func Open() (*Watch, error) {
 		Height: 240,
 	})
 	screen.EnableBacklight(false) // enables the backlight
+
+	// Configure the battery status pins.
+	pinBatteryCharging.Configure(machine.PinConfig{Mode: machine.PinInput})
+	pinPowerConnected.Configure(machine.PinConfig{Mode: machine.PinInput})
+
 	return watch, nil
+}
+
+// BatteryStatusRaw reads and returns the current battery voltage in millivolts
+// (mV) and returns the current charging status of the battery (discharging,
+// charging, full).
+func (w *Watch) BatteryStatusRaw() (millivolt int, status ChargeStatus) {
+	if !pinPowerConnected.Get() {
+		// Power is connected.
+		if !pinBatteryCharging.Get() {
+			// Battery is charging.
+			status = Charging
+		} else {
+			status = FullyCharged
+		}
+	} else {
+		status = Discharging
+	}
+	value := machine.ADC{31}.Get()
+	return int(value) * 2000 / (65535 / 3), status
+}
+
+// BatteryStatus reads and returns the current battery status (percent and
+// charge status).
+func (w *Watch) BatteryStatus() (millivolts, percent int, status ChargeStatus) {
+	millivolts, status = w.BatteryStatusRaw()
+	percent = voltageToPercent(millivolts, voltagePercentPositions)
+	return
 }

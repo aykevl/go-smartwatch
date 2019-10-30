@@ -31,3 +31,9 @@ func Open() (*Watch, error) {
 	}
 	return watch, nil
 }
+
+// BatteryStatus reads and returns the current battery status (percent and
+// whether it is charging).
+func (w *Watch) BatteryStatus() (millivolt, percent int, status ChargeStatus) {
+	return 3700, 75, Discharging
+}
