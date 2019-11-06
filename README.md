@@ -35,6 +35,8 @@ digital clock example on a PineTime:
 
     tinygo flash -target=pinetime-devkit0 github.com/aykevl/go-smartwatch/examples/digitalclock
 
+Note: as of this time (2019-11-07), you will need the development version of TinyGo (the `dev` branch). Take a look [here](https://tinygo.org/getting-started/) for information on how to build it from source.
+
 <img src="./img/digitalclock-pinetime.jpg" alt="PineTime running the digital clock example" width="327"/>
 
 ## Linux simulation
